@@ -1,0 +1,22 @@
+<table border="1">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Owner</th>
+            <th>Last Change</th>
+            <th>&nbsp;</th>
+        </tr>
+    </thead>
+    <tbody>
+%for (repo_name, repo_obj) in c.repos.items():
+        <tr>
+            <td>${repo_name}</td>
+            <td>${repo_obj.description}</td>
+            <td>${repo_obj.owner}</td>
+            <td>${repo_obj.last_change}</td>
+            <td>shortlog</td>
+        </tr>
+%endfor
+    </tbody>
+</table>
