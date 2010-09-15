@@ -18,11 +18,11 @@ class GitRepo(git.repo.Repo):
         return [git.commit.Commit(self, commit) for commit in newest_commits]
 
     def latest_tags(self, count=1):
-        newest_tags = self.git.rev_list(no_walk=True, tags=True,
-                                max_count=count, date_order=True).split('\n')
-
-        if not newest_tags:
-            raise Exception("No tags found")
+        try:
+            newest_tags = self.git.rev_list(no_walk=True, tags=True,
+                                    max_count=count, date_order=True).split('\n')
+        except:
+            return []
 
         return [git.tag.Tag(self.git.describe(tag), tag)
                 for tag in newest_tags]
