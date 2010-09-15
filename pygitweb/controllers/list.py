@@ -5,8 +5,6 @@ from pylons.controllers.util import abort, redirect
 
 from pygitweb.lib.base import BaseController, render
 
-from git.utils import is_git_dir
-from pygitweb.lib.repo import GitRepo
 from time import asctime
 from pylons import app_globals as g
 import os

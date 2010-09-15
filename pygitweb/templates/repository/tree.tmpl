@@ -1,0 +1,12 @@
+# -*- coding: utf-8 -*-
+<%inherit file="/base.tmpl" />
+
+Currently browsing <strong>/${c.path}</strong><br />
+<br />
+%for k, v in sorted(c.tree_obj.items()):
+%   if h.is_dir(v.mode):
+D ${h.link_to(k, h.url("tree", repo=c.repo, commitish=c.commitish, path=h.join(c.path, k)))}<br />
+%   else:
+F ${h.link_to(k, h.url("file", repo=c.repo, commitish=c.commitish, path=h.join(c.path, k)))}<br />
+%   endif
+%endfor

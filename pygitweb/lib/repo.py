@@ -8,15 +8,28 @@ class GitRepo(git.repo.Repo):
     def __init__(self, *args, **kwargs):
         super(GitRepo, self).__init__(*args, **kwargs)
 
-    def latest_commits(self, count=1, sort="-committerdate"):
-        newest_head = git.head.Head.find_all(self, count=count, sort=sort)
-        if newest_head:
-            return newest_head
-        raise Exception("No head found")
+    def latest_commits(self, count=1):
+        newest_commits = self.git.rev_list(
+                        all=True, max_count=count, date_order=True).split('\n')
+
+        if not newest_commits:
+            raise Exception("No commits found")
+
+        return [git.commit.Commit(self, commit) for commit in newest_commits]
+
+    def latest_tags(self, count=1):
+        newest_tags = self.git.rev_list(no_walk=True, tags=True,
+                                max_count=count, date_order=True).split('\n')
+
+        if not newest_tags:
+            raise Exception("No tags found")
+
+        return [git.tag.Tag(self.git.describe(tag), tag)
+                for tag in newest_tags]
 
     @property
     def last_change(self):
-        return asctime(self.latest_commits(count=1)[0].commit.committed_date)
+        return asctime(self.latest_commits(count=1)[0].committed_date)
 
     @property
     def owner(self):
@@ -25,3 +38,20 @@ class GitRepo(git.repo.Repo):
             return file(filename).read().rstrip()
         except IOError:
             return ""
+
+    def archive(self, format, treeish='master', prefix=None, **kwargs):
+        from cStringIO import StringIO
+        ios = StringIO()
+        if treeish is None:
+            treeish = self.active_branch
+        if prefix and 'prefix' not in kwargs:
+            kwargs['prefix'] = prefix
+        kwargs['output_stream'] = ios
+
+        self.git.archive(treeish, **kwargs)
+        return ios
+
+    def archive_tar_bz2(self, *args, **kwargs):
+        return self.archive(format="tar.bz2", *args, **kwargs)
+    def archive_zip(self, *args, **kwargs):
+        return self.archive(format="zip", *args, **kwargs)

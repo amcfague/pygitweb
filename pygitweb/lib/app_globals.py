@@ -42,3 +42,5 @@ class Globals(object):
         """
         self.cache = CacheManager(**parse_cache_config_options(config))
         self.repos = find_repositories(config.get('git_repos'))
+        self.formats = config.get("formats", "tar.gz,tar.bz2,zip").split(",")
+        self.formats.sort()
