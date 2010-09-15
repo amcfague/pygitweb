@@ -1,0 +1,44 @@
+# -*- coding: utf-8 -*-
+<%inherit file="/base.tmpl" />
+<%def name="head_tags()">
+    ${h.stylesheet_link("/css/highlight.css")}
+</%def>
+
+<table border="0" cellspacing="4" cellpadding="4">
+  <tbody>
+    <tr>
+      <td>author</td>
+      <td>${c.commit.author.name} &lt;${h.mail_to(c.commit.author.email, encode="hex")}&gt; (${h.asctime(c.commit.authored_date)})</td>
+    </tr>
+    <tr>
+      <td>committer</td>
+      <td>${c.commit.committer.name} &lt;${h.mail_to(c.commit.committer.email, encode="hex")}&gt; (${h.asctime(c.commit.committed_date)})</td>
+    </tr>
+    <tr>
+      <td>commit</td>
+      <td>${h.link_to(c.commit.id, h.url("commit", repo=c.repo, commitish=c.commit.id))}</td>
+    </tr>
+    <tr>
+      <td>tree</td>
+      <td>${h.link_to(c.commit.tree.id, h.url("tree", repo=c.repo, commitish=c.commit.id))}</td>
+    </tr>
+%for parent in c.commit.parents:
+    <tr>
+      <td>parent</td>
+      <td>${h.link_to(parent.id, h.url("commit", repo=c.repo, commitish=parent.id))}</td>
+    </tr>
+%endfor
+%for format in c.formats:
+    <tr>
+      <td>download</td>
+      <td>${h.link_to("pygitweb-%s.%s" % (c.commit.id, format), h.url("download", repo=c.repo, treeish=c.commit.id, format=format))}
+    </tr>
+%endfor
+  </tbody>
+</table>
+<br />
+${c.commit.stats.total['files']} files changed, ${c.commit.stats.total['insertions']} insertions, ${c.commit.stats.total['deletions']} deletions
+
+%for commit in c.commit.diffs:
+${h.highlight_syntax(commit.diff) | n}
+%endfor

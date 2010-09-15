@@ -1,0 +1,48 @@
+<table border="1">
+    <thead>
+        <tr>
+            <th>Branch</th>
+            <th>Commit message</th>
+        </tr>
+    </thead>
+    <tbody>
+%for branch in c.branches:
+        <tr>
+            <td>${branch.name}</td>
+            <td>${branch.commit.message}</td>
+        </tr>
+%endfor
+    </tbody>
+</table>
+<table border="1">
+    <thead>
+        <tr>
+            <th>Tag</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+%for tag in c.tags:
+        <tr>
+            <td>${tag.name}</td>
+            <td>${tag.commit}</td>
+        </tr>
+%endfor
+    </tbody>
+</table>
+<table border="1">
+    <thead>
+        <tr>
+            <th>Age</th>
+            <th>Commit message</th>
+        </tr>
+    </thead>
+    <tbody>
+%for commit in c.commits:
+        <tr>
+            <td>${h.age(commit.committed_date)}</td>
+            <td>${h.link_to(h.trunc(commit.message, 80), h.url('commit', repo=c.repo, commitish=commit.id))}</td>
+        </tr>
+%endfor
+    </tbody>
+</table>
