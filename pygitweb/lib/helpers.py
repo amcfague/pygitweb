@@ -10,5 +10,5 @@ from pylons import url
 from webhelpers.html.tags import link_to, stylesheet_link
 from webhelpers.html.tools import mail_to
 
-from pygitweb.lib.util import age, highlight_syntax, trunc, is_dir
+from pygitweb.lib.util import age, highlight_syntax, trunc, is_dir, oct_to_sym
 from os.path import join

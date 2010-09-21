@@ -5,7 +5,7 @@ from beaker.util import parse_cache_config_options
 from pylons import config
 import os
 from git.utils import is_git_dir
-from pygitweb.lib.repo import GitRepo
+from pygitweb.lib.repo import PyGitRepo
 
 def find_repositories(repo_root):
     repos = {}
@@ -20,7 +20,7 @@ def find_repositories(repo_root):
 
             # Generate the absolute and relative paths
             relative_path = os.path.relpath(absolute_path, repo_root)
-            repos[relative_path] = GitRepo(absolute_path)
+            repos[relative_path] = PyGitRepo(absolute_path)
 
             # Since this is a .git dir, we don't need to look any further;
             #   remove it from the list of directories to walk

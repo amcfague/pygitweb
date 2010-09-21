@@ -1,0 +1,68 @@
+table.diffstat {
+	border-collapse: collapse;
+	border: solid 1px #aaa;
+	background-color: #eee;
+}
+
+table.diffstat th {
+	font-weight: normal;
+	text-align: left;
+	text-decoration: underline;
+	padding: 0.1em 1em 0.1em 0.1em;
+	font-size: 100%;
+}
+
+table.diffstat td {
+	padding: 0.2em 0.2em 0.1em 0.1em;
+	font-size: 100%;
+	border: none;
+}
+
+table.diffstat td.mode {
+	white-space: nowrap;
+}
+
+table.diffstat td span.modechange {
+	padding-left: 1em;
+	color: red;
+}
+
+table.diffstat td.add a {
+	color: green;
+}
+
+table.diffstat td.del a {
+	color: red;
+}
+
+table.diffstat td.upd a {
+	color: blue;
+}
+
+table.diffstat td.graph {
+	width: 500px;
+	vertical-align: middle;
+}
+
+table.diffstat td.graph table {
+	border: none;
+}
+
+table.diffstat td.graph td {
+	padding: 0px;
+	border: 0px;
+	height: 7pt;
+}
+
+table.diffstat td.graph td.add {
+	background-color: #5c5;
+}
+
+table.diffstat td.graph td.rem {
+	background-color: #c55;
+}
+
+div.diffstat-summary {
+	color: #888;
+	padding-top: 0.5em;
+}

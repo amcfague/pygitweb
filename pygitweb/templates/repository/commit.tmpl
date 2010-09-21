@@ -2,43 +2,84 @@
 <%inherit file="/base.tmpl" />
 <%def name="head_tags()">
     ${h.stylesheet_link("/css/highlight.css")}
+    ${h.stylesheet_link("/css/graph.css")}
 </%def>
 
 <table border="0" cellspacing="4" cellpadding="4">
   <tbody>
     <tr>
       <td>author</td>
-      <td>${c.commit.author.name} &lt;${h.mail_to(c.commit.author.email, encode="hex")}&gt; (${h.asctime(c.commit.authored_date)})</td>
+      <td>${c.commit.author_name} &lt;${h.mail_to(c.commit.author_email, encode="hex")}&gt; (${h.asctime(c.commit.authored_date)})</td>
     </tr>
     <tr>
       <td>committer</td>
-      <td>${c.commit.committer.name} &lt;${h.mail_to(c.commit.committer.email, encode="hex")}&gt; (${h.asctime(c.commit.committed_date)})</td>
+      <td>${c.commit.committer_name} &lt;${h.mail_to(c.commit.committer_email, encode="hex")}&gt; (${h.asctime(c.commit.commit_date)})</td>
     </tr>
     <tr>
       <td>commit</td>
-      <td>${h.link_to(c.commit.id, h.url("commit", repo=c.repo, commitish=c.commit.id))}</td>
+      <td>${h.link_to(c.commit.id, h.url("commit", repo=c.repo, id=c.commit.id))}</td>
     </tr>
     <tr>
       <td>tree</td>
-      <td>${h.link_to(c.commit.tree.id, h.url("tree", repo=c.repo, commitish=c.commit.id))}</td>
+      <td>${h.link_to(c.commit.tree.id, h.url("tree", repo=c.repo, id=c.commit.id))}</td>
     </tr>
 %for parent in c.commit.parents:
     <tr>
       <td>parent</td>
-      <td>${h.link_to(parent.id, h.url("commit", repo=c.repo, commitish=parent.id))}</td>
+      <td>${h.link_to(parent.id, h.url("commit", repo=c.repo, id=parent.id))}</td>
     </tr>
 %endfor
-%for format in c.formats:
+%for format in ['tar.gz']:
     <tr>
       <td>download</td>
-      <td>${h.link_to("pygitweb-%s.%s" % (c.commit.id, format), h.url("download", repo=c.repo, treeish=c.commit.id, format=format))}
+      <td>${h.link_to("pygitweb-%s.%s" % (c.commit.id, format), h.url("download", repo=c.repo, id=c.commit.id, format=format))}
     </tr>
 %endfor
   </tbody>
 </table>
 <br />
-${c.commit.stats.total['files']} files changed, ${c.commit.stats.total['insertions']} insertions, ${c.commit.stats.total['deletions']} deletions
+<p>
+<strong>${c.commit.summary}</strong><br />
+<br />
+${c.commit.message}<br />
+<br />
+${c.commit.files_changed} files changed, ${c.commit.insertions} insertions, ${c.commit.deletions} deletions
+</p>
 
+<table class="diffstat">
+  <tbody>
+%for diff in c.commit.diffs:
+${diff.total_lines}
+%  	if diff.renamed:
+	<tr>
+	  <td>${h.oct_to_sym("0644")}</td>
+	  <td>${diff.a_mode}</td>
+	  <td>${diff.total_lines}</td>
+	  <td class="graph" style="width: 500px">
+	  	<table>
+	  	  <tr>
+	  	    <td class="add" style="width: ${diff.insertions * 100 / diff.lines}%;"/>
+	  	  </tr>
+	  	</table>
+	  </td>
+	</tr>
+	<tr>
+	  <td>${h.oct_to_sym("0644")}</td>
+	  <td>${diff.b_mode}</td>
+	  <td>${diff.lines}</td>
+	  <td>${diff.total_lines}</td>
+	</tr>
+%	elif diff.deleted_file:
+${h.oct_to_sym(diff.b_mode)} ${diff.b_path}<br />
+%	elif diff.new_file:
+${h.oct_to_sym(diff.b_mode)} ${diff.b_path}<br />
+%	else:
+${h.oct_to_sym(diff.b_mode)} ${diff.a_path}<br/>
+%	endif
+%endfor
+  </tbody>
+</table>
+<br/>
 %for commit in c.commit.diffs:
 ${h.highlight_syntax(commit.diff) | n}
 %endfor

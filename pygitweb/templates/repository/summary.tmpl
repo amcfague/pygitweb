@@ -1,48 +1,71 @@
-<table border="1">
-    <thead>
-        <tr>
-            <th>Branch</th>
-            <th>Commit message</th>
-        </tr>
-    </thead>
-    <tbody>
-%for branch in c.branches:
-        <tr>
-            <td>${branch.name}</td>
-            <td>${branch.commit.message}</td>
-        </tr>
+# -*- coding: utf-8 -*-
+<%inherit file="/base.tmpl" />
+
+<table cellpadding="2" border="1" cellspacing="4">
+  <thead>
+    <tr>
+      <th>Branch</th>
+      <th>Commit message</th>
+      <th>Author</th>
+      <th>Age</th>
+    </tr>
+  </thead>
+  <tbody>
+%for branch in c.repo_obj.branches:
+	<tr>
+	  <td>${branch.name}</td>
+	  <td>${h.trunc(branch.commit.message, 80)}</td>
+	  <td>${branch.commit.author_name}</td>
+	  <td>${h.age(branch.commit.commit_date)}</td>
+	</tr>
 %endfor
-    </tbody>
+  </tbody>
 </table>
-<table border="1">
-    <thead>
-        <tr>
-            <th>Tag</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-%for tag in c.tags:
-        <tr>
-            <td>${tag.name}</td>
-            <td>${tag.commit}</td>
-        </tr>
+<br />
+<table cellpadding="2" border="1" cellspacing="4">
+  <thead>
+    <tr>
+      <th>Tag</th>
+      <th>Download</th>
+      <th>Author</th>
+      <th>Age</th>
+    </tr>
+  </thead>
+  <tbody>
+%for tag in c.repo_obj.latest_tags():
+    <tr>
+      <td>${tag.name}</td>
+      <td>${tag.commit.id}</td>
+      <td>${tag.commit.author_name}</td>
+      <td>${h.age(tag.commit.commit_date)}</td>
+    </tr>
 %endfor
-    </tbody>
+  </tbody>
 </table>
-<table border="1">
-    <thead>
-        <tr>
-            <th>Age</th>
-            <th>Commit message</th>
-        </tr>
-    </thead>
-    <tbody>
-%for commit in c.commits:
-        <tr>
-            <td>${h.age(commit.committed_date)}</td>
-            <td>${h.link_to(h.trunc(commit.message, 80), h.url('commit', repo=c.repo, commitish=commit.id))}</td>
-        </tr>
+<br />
+<table cellpadding="2" border="1" cellspacing="4">
+  <thead>
+    <tr>
+      <th>Age</th>
+      <th>Commit message</th>
+      <th>Author</th>
+      <th>Files</th>
+      <th>Lines</th>
+    </tr>
+  </thead>
+  <tbody>
+%for commit in c.repo_obj.latest_commits(10):
+	<tr>
+	  <td>${h.age(commit.commit_date)}</td>
+	  <td>
+	  	${h.link_to(h.trunc(commit.message, 80), h.url("commit", repo=c.repo, id=commit.id))}
+	  	${"".join(["[%s]" % heads.name for heads in commit.tags.values()])}
+	  	${"".join(["{%s}" % heads.name for heads in commit.heads])}
+	  </td>
+	  <td>${commit.author_name}</td>
+	  <td>${commit.files_changed}</td>
+	  <td>-${commit.deletions}/+${commit.insertions}</td>
+	</tr>
 %endfor
-    </tbody>
+  </tbody>
 </table>
