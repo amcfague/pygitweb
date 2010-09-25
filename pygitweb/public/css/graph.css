@@ -1,3 +1,7 @@
+table {
+      border-collapse: collapse;
+}
+
 table.diffstat {
 	border-collapse: collapse;
 	border: solid 1px #aaa;
@@ -65,4 +69,17 @@ table.diffstat td.graph td.rem {
 div.diffstat-summary {
 	color: #888;
 	padding-top: 0.5em;
+}
+
+table.blob td.lines {
+	margin: 0; padding: 0 0 0 0.5em;
+	vertical-align: top;
+	color: black;
+}
+
+table.blob td.linenumbers {
+	margin: 0; padding: 0 0.5em 0 0.5em;
+	vertical-align: top;
+	text-align: right;
+	border-right: 1px solid gray;
 }

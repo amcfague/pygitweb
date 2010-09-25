@@ -14,14 +14,18 @@ log = logging.getLogger(__name__)
 class RepositoryController(BaseController):
     def __before__(self):
         repo = request.params.get('repo')
-        if not repo.endswith('.git'):
-            repo = repo + ".git"
         if not repo:
             response.status_int = 400
             raise Exception("Repository not specified.")
+        
+        if not repo.endswith('.git'):
+            repo = repo + ".git"
+            
         if repo not in g.repos:
             response.status_int = 404
             raise Exception("Repository `%s' not found" % repo)
+        
+        self.repo_name = repo
         self.repo_obj = g.repos[repo]
         c.repo = repo
 
@@ -35,7 +39,51 @@ class RepositoryController(BaseController):
             raise Exception("No ID hash specified.")
         
         c.commit = self.repo_obj.commit(id)
+        c.formats = g.formats
+        c.repo_name = self.repo_name.split('/')[-1].rstrip('.git')
         return render("repository/commit.tmpl")
+
+    def tree(self):
+        id = request.params.get('id')
+        if not id:
+            raise Exception("No tree ID specified.")
+        
+        path = request.params.get('path', '')
+        obj = self.repo_obj.tree(id)
+        
+        if path:
+            path = path.rstrip('/')
+            for folder in path.split('/'):
+                obj = obj.get(folder)
+        
+        c.path = path
+        c.id = id
+        if isinstance(obj, Blob):
+            c.blob = obj
+            return render('repository/blob.tmpl')
+        else:
+            c.tree = obj
+            return render('repository/tree.tmpl')
+
+    def download(self):
+        id = request.params.get('id')
+        if not id:
+            raise Exception("No commit ID specified.")
+        
+        format = request.params.get('format', 'tar.gz')
+        if format not in g.formats:
+            raise Exception("`%s' format not supported; use %s" % (format, g.formats))
+        
+        # Generate the repo name for the filename
+        repo_name = self.repo_name.split('/')[-1].rstrip('.git')
+        filename = "%s-%s.%s" % (repo_name, id, format)
+        response.content_disposition = "attachment; filename=%s" % filename
+        
+        func_name = "self.repo_obj.archive_%s" % format.replace('.', '_')
+        print func_name
+        mime_type, compressed_data = eval(func_name)(id)
+        response.content_type = mime_type
+        return compressed_data
 
 #class RepositoryController(BaseController):
 #    def __before__(self):

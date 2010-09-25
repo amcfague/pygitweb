@@ -1,0 +1,8 @@
+# -*- coding: utf-8 -*-
+<%inherit file="/base.tmpl" />
+<%def name="head_tags()">
+    ${h.stylesheet_link("/css/highlight.css")}
+    ${h.stylesheet_link("/css/graph.css")}
+</%def>
+<b>${c.blob.name}</b><br/>
+${h.highlight_blob(c.blob) | n}

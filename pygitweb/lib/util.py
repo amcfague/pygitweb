@@ -3,6 +3,7 @@ import pygments
 from time import time, mktime, timezone
 from operator import itemgetter
 from os.path import join
+import string
 
 PERMISSIONS = {
     "0": "---",
@@ -14,13 +15,36 @@ PERMISSIONS = {
     "6": "rw-",
     "7": "rwx"}
 
+TYPES = {
+    "040":'d',
+    "100":'-',
+    "120":'l',
+    "160":'s'}
+
 def create_path(*paths):
     join(*[path for path in paths if path])
 
-def highlight_syntax(code):
-    lexer = pygments.lexers.guess_lexer(code)
+def highlight_diff(diff):
+    lexer = pygments.lexers.DiffLexer()
     formatter = pygments.formatters.HtmlFormatter()
-    return pygments.highlight(code, lexer, formatter)
+    return pygments.highlight(diff, lexer, formatter)
+
+def highlight_blob(blob):
+    def get_lexer():
+        try: return pygments.lexers.get_lexer_for_mimetype(blob.mime_type)
+        except pygments.util.ClassNotFound: pass
+        
+        try: return pygments.lexers.get_lexer_for_filename(blob.name)
+        except pygments.util.ClassNotFound: pass
+        
+        try: return pygments.lexers.guess_lexer(blob.data)
+        except pygments.util.ClassNotFound: pass
+        
+        return pygments.lexers.TextLexer()
+
+    lexer = get_lexer()
+    formatter = pygments.formatters.HtmlFormatter(linenos=True)
+    return pygments.highlight(blob.data, lexer, formatter)
 
 def trunc(str, max_length):
     if len(str) < max_length:
@@ -69,11 +93,23 @@ def is_dir(mode):
     from string import atoi
     return S_ISDIR(atoi(mode, 8))
 
+def trim_first_line(msg):
+    pos = string.find(msg, '\n')
+    if pos == -1:
+        return ""
+    return msg[pos+1:]
+
 def oct_to_sym(str_perms):
-    # Chop off all but the rightmost (in case there are more)
-    perms = str_perms[-3:]
+    if not isinstance(str_perms, str):
+        raise Exception("Permissions must be a string.")
     
-    return "".join(("-",
+    perms = str_perms[-3:]
+    type = str_perms[:3]
+    
+    return "".join((TYPES[type],
                    PERMISSIONS[perms[0]],
                    PERMISSIONS[perms[1]],
                    PERMISSIONS[perms[2]]))
+
+def count_lines(msg):
+    return string.count(msg, '\n')

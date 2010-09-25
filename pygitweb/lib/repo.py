@@ -2,6 +2,8 @@ import logging
 from git import Repo, Commit, Tag
 from os.path import join
 from time import asctime
+from string import count
+from cStringIO import StringIO
 
 log = logging.getLogger(__name__)
 
@@ -9,6 +11,15 @@ class PyGitRepo(object):
     def __init__(self, repo_path):
         self.repo_obj = Repo(repo_path)
         self.branches = [PyGitHead(branch) for branch in self.repo_obj.branches] 
+        
+        try:
+            self.owner = open(join(repo_path, 'owner')).read().strip()
+        except IOError:
+            self.owner = ""
+
+    @property
+    def last_change(self):
+        return self.latest_commits(1)[0]
 
     def latest_commits(self, count=10):
         try:
@@ -60,6 +71,18 @@ class PyGitRepo(object):
         # Get the blob object
         blob_obj = Blob(self.repo_obj, id)
         return PyGitBlob(blob_obj)
+    
+    def archive_tar_gz(self, id):
+        return "application/x-compressed", self.repo_obj.archive_tar_gz(id)
+    def archive_tar_bz2(self, id):
+        from bz2 import compress
+        return "application/bzip2", compress(self.repo_obj.archive_tar(id))
+    def archive_zip(self, id):
+        return "application/zip", self.repo_obj.git.archive(id, format="zip")
+    
+    @property
+    def description(self):
+        return self.repo_obj.description
 
     def __repr__(self):
         return "<PyGitRepo path='%s'>" % self.repo_obj.path
@@ -114,7 +137,7 @@ class PyGitCommit(object):
         return [PyGitCommit(parent) for parent in self.commit_obj.parents]
     @property
     def diffs(self):
-        return [PyGitDiff(diff, self.commit_obj.stats) for diff in self.commit_obj.diffs]
+        return [PyGitDiff(diff, self.commit_obj.stats, self.commit_obj.tree) for diff in self.commit_obj.diffs]
     @property
     def mode(self):
         return self.commit_obj.mode
@@ -122,17 +145,32 @@ class PyGitCommit(object):
     def __repr__(self):
         return str("<PyGitCommit id='%s'>" % self.commit_obj.id)
 
+def get_blob(tree_obj, path):
+    blob = tree_obj
+    for p in path.split('/'):
+        blob = blob.get(p)
+    return blob
+
 class PyGitDiff(object):
-    def __init__(self, diff_obj, stats_obj):
+    def __init__(self, diff_obj, stats_obj, tree_obj):
         self.diff_obj = diff_obj
         self.stats_obj = stats_obj
+        
+        self.blob_obj = get_blob(tree_obj, diff_obj.b_path)
+        self.mode = diff_obj.b_mode or diff_obj.a_mode or self.blob_obj.mode
+        self.total_lines = len(StringIO(self.blob_obj.data).readlines())
+        self.max_changes = 0
+        if self.lines > self.max_changes:
+            self.max_changes = self.lines
     
     @property
     def a_commit(self):
         return self.diff_obj.a_commit
     @property
     def a_mode(self):
-        return self.diff_obj.a_mode
+        if self.diff_obj.a_mode:
+            return self.diff_obj.a_mode
+        return self.mode
     @property
     def a_path(self):
         return self.diff_obj.a_path
@@ -141,7 +179,9 @@ class PyGitDiff(object):
         return self.diff_obj.b_commit
     @property
     def b_mode(self):
-        return self.diff_obj.b_mode
+        if self.diff_obj.b_mode:
+            return self.diff_obj.b_mode
+        return self.mode
     @property
     def b_path(self):
         return self.diff_obj.b_path
@@ -172,30 +212,17 @@ class PyGitDiff(object):
     @property
     def lines(self):
         return self.stats_obj.files[self.b_path]["lines"]
-    @property
-    def total_lines(self):
-        print self.diff_obj.a_commit
-        print self.diff_obj.a_mode
-        print self.diff_obj.a_path
-        print self.diff_obj.b_commit
-        print self.diff_obj.b_mode
-        print self.diff_obj.b_path
-        print dir(self.diff_obj.b_commit)
 
 class PyGitTree(object):
     def __init__(self, tree_obj):
         self.tree_obj = tree_obj
     
-    @property
     def get(self, key):
         return self.tree_obj.get(key)
-    @property
     def items(self):
         return self.tree_obj.items()
-    @property
     def keys(self):
         return self.tree_obj.keys()
-    @property
     def values(self):
         return self.tree_obj.values()
     @property

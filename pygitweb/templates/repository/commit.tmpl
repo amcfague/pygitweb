@@ -29,10 +29,10 @@
       <td>${h.link_to(parent.id, h.url("commit", repo=c.repo, id=parent.id))}</td>
     </tr>
 %endfor
-%for format in ['tar.gz']:
+%for format in c.formats:
     <tr>
       <td>download</td>
-      <td>${h.link_to("pygitweb-%s.%s" % (c.commit.id, format), h.url("download", repo=c.repo, id=c.commit.id, format=format))}
+      <td>${h.link_to("%s-%s.%s" % (c.repo_name, c.commit.id, format), h.url("download", repo=c.repo, id=c.commit.id, format=format))}
     </tr>
 %endfor
   </tbody>
@@ -40,8 +40,8 @@
 <br />
 <p>
 <strong>${c.commit.summary}</strong><br />
+<pre>${h.trim_first_line(c.commit.message)}</pre>
 <br />
-${c.commit.message}<br />
 <br />
 ${c.commit.files_changed} files changed, ${c.commit.insertions} insertions, ${c.commit.deletions} deletions
 </p>
@@ -49,37 +49,54 @@ ${c.commit.files_changed} files changed, ${c.commit.insertions} insertions, ${c.
 <table class="diffstat">
   <tbody>
 %for diff in c.commit.diffs:
-${diff.total_lines}
 %  	if diff.renamed:
 	<tr>
-	  <td>${h.oct_to_sym("0644")}</td>
-	  <td>${diff.a_mode}</td>
-	  <td>${diff.total_lines}</td>
-	  <td class="graph" style="width: 500px">
-	  	<table>
+	  <td>${h.oct_to_sym(diff.b_mode)}</td>
+	  <td>${diff.rename_to}(renamed from ${diff.rename_from})</td>
+	  <td>${diff.lines}</td>
+	  <td class="graph">
+	  	<table summary="file diffstat" style="width: 500px;">
 	  	  <tr>
-	  	    <td class="add" style="width: ${diff.insertions * 100 / diff.lines}%;"/>
+	  	    <td class="add" style="width: ${diff.insertions * 100 / diff.total_lines}%;"/>
+	  	    <td class="rem" style="width: ${diff.deletions * 100 / diff.total_lines}%;"/>
 	  	  </tr>
 	  	</table>
 	  </td>
 	</tr>
-	<tr>
-	  <td>${h.oct_to_sym("0644")}</td>
-	  <td>${diff.b_mode}</td>
-	  <td>${diff.lines}</td>
-	  <td>${diff.total_lines}</td>
-	</tr>
 %	elif diff.deleted_file:
-${h.oct_to_sym(diff.b_mode)} ${diff.b_path}<br />
-%	elif diff.new_file:
-${h.oct_to_sym(diff.b_mode)} ${diff.b_path}<br />
+	<tr>
+	  <td>-------</td>
+	  <td>${diff.a_path}</td>
+	  <td>${diff.lines}</td>
+	  <td class="graph">
+	  	<table summary="file diffstat" style="width: 500px;">
+	  	  <tr>
+	  	    <td class="add" style="width: ${diff.insertions * 100 / diff.total_lines}%;"/>
+	  	    <td class="rem" style="width: ${diff.deletions * 100 / diff.total_lines}%;"/>
+	  	  </tr>
+	  	</table>
+	  </td>
+	</tr>
 %	else:
-${h.oct_to_sym(diff.b_mode)} ${diff.a_path}<br/>
+	<tr>
+	  <td>${h.oct_to_sym(diff.b_mode)}</td>
+	  <td>${diff.b_path}</td>
+	  <td>${diff.lines}</td>
+	  <td class="graph">
+	  	<table summary="file diffstat" style="width: ${100 if diff.max_changes > 100 else diff.max_changes}%;">
+	  	  <tr>
+	  	    <td class="add" style="width: ${diff.insertions * 100.0 / diff.max_changes}%;"/>
+	  	    <td class="rem" style="width: ${diff.deletions * 100.0 / diff.max_changes}%;"/>
+	  	    <td class="none" style="width: ${(diff.max_changes - diff.lines) * 100.0 / diff.max_changes}%;"/>
+	  	  </tr>
+	  	</table>
+	  </td>
+	</tr>
 %	endif
 %endfor
   </tbody>
 </table>
 <br/>
 %for commit in c.commit.diffs:
-${h.highlight_syntax(commit.diff) | n}
+${h.highlight_diff(commit.diff) | n}
 %endfor

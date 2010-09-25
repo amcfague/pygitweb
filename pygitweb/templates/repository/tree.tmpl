@@ -3,10 +3,21 @@
 
 Currently browsing <strong>/${c.path}</strong><br />
 <br />
-%for k, v in sorted(c.tree_obj.items()):
-%   if h.is_dir(v.mode):
-D ${h.link_to(k, h.url("tree", repo=c.repo, id=c.commitish, path=h.join(c.path, k)))}<br />
-%   else:
-F ${h.link_to(k, h.url("file", repo=c.repo, id=c.commitish, path=h.join(c.path, k)))}<br />
-%   endif
+<table cellspacing="0" cellpadding="0" border="0" width="100%">
+  <thead>
+    <tr align="left">
+      <th>Mode</th>
+      <th>Name</th>
+      <th>Size</th>
+    </tr>
+  </thead>
+  <tbody>
+%for k, v in sorted(c.tree.items()):
+    <tr>
+      <td width="10%">${h.oct_to_sym(v.mode)}</td>
+      <td width="50%">${h.link_to(k, h.url("tree", repo=c.repo, id=c.id, path=h.join(c.path, k)))}</td>
+      <td width="40%">${v.size if 'size' in dir(v) else '-'}</td>
+    </tr>
 %endfor
+  </tbody>
+</table>
