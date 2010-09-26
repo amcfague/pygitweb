@@ -19,7 +19,7 @@ def make_map(config):
     map.connect('/error/{action}/{id}', controller='error')
 
     # CUSTOM ROUTES HERE
-    
+    map.connect('index', '/', controller='list', action='index')
     map.connect('commit', '/{repo:.*?}/commit/{id}', controller="repository", action="commit")
     map.connect('download', '/{repo:.*?}/download/{id}', controller="repository", action="download")
     map.connect('summary', '/{repo:.*?}/summary', controller="repository", action="summary")
@@ -27,9 +27,5 @@ def make_map(config):
     
     # Utility routes
     map.connect('/{repo:.*?}/tree', controller="repository", action="tree", path="")
-
-    #map.connect('/{controller}', action='index')
-    #map.connect('/{controller}/{action}')
-    #map.connect('/{controller}/{action}/{id}')
 
     return map

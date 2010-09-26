@@ -14,7 +14,7 @@
             <td>${h.link_to(repo_name, h.url(controller="repository", action="summary", repo=repo_name))}</td>
             <td>${repo_obj.description}</td>
             <td>${repo_obj.owner}</td>
-            <td>${repo_obj.last_change}</td>
+            <td>${repo_obj.last_change.message}</td>
             <td>shortlog</td>
         </tr>
 %endfor
