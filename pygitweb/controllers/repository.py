@@ -12,12 +12,13 @@ from os.path import join
 log = logging.getLogger(__name__)
 
 class RepositoryController(BaseController):
-    def __before__(self):
-        repo = request.params.get('repo')
+    def __before__(self, repo=None):
         if not repo:
             response.status_int = 400
             raise Exception("Repository not specified.")
-        
+
+        self.repo_name = repo.rstrip('.git')
+                
         if not repo.endswith('.git'):
             repo = repo + ".git"
             
@@ -25,7 +26,6 @@ class RepositoryController(BaseController):
             response.status_int = 404
             raise Exception("Repository `%s' not found" % repo)
         
-        self.repo_name = repo
         self.repo_obj = g.repos[repo]
         c.repo = repo
 
@@ -33,8 +33,7 @@ class RepositoryController(BaseController):
         c.repo_obj = self.repo_obj
         return render("repository/summary.tmpl")
     
-    def commit(self):
-        id = request.params.get('id')
+    def commit(self, id=None):
         if not id:
             raise Exception("No ID hash specified.")
         
@@ -43,12 +42,8 @@ class RepositoryController(BaseController):
         c.repo_name = self.repo_name.split('/')[-1].rstrip('.git')
         return render("repository/commit.tmpl")
 
-    def tree(self):
-        id = request.params.get('id')
-        if not id:
-            raise Exception("No tree ID specified.")
-        
-        path = request.params.get('path', '')
+    def tree(self, path=""):
+        id = request.params.get('id', 'master')
         obj = self.repo_obj.tree(id)
         
         if path:
@@ -65,24 +60,19 @@ class RepositoryController(BaseController):
             c.tree = obj
             return render('repository/tree.tmpl')
 
-    def download(self):
-        id = request.params.get('id')
-        if not id:
-            raise Exception("No commit ID specified.")
-        
-        format = request.params.get('format', 'tar.gz')
+    def download(self, id):
+        format = request.params.get('format', g.formats[0])
         if format not in g.formats:
             raise Exception("`%s' format not supported; use %s" % (format, g.formats))
         
-        # Generate the repo name for the filename
-        repo_name = self.repo_name.split('/')[-1].rstrip('.git')
-        filename = "%s-%s.%s" % (repo_name, id, format)
+        # Generate the filename
+        filename = "%s-%s.%s" % (self.repo_name.split('/')[-1], id, format)
+        
+        # This will display the filename on the browser download dialog
         response.content_disposition = "attachment; filename=%s" % filename
         
         func_name = "self.repo_obj.archive_%s" % format.replace('.', '_')
-        print func_name
-        mime_type, compressed_data = eval(func_name)(id)
-        response.content_type = mime_type
+        response.content_type, compressed_data = eval(func_name)(id)
         return compressed_data
 
 #class RepositoryController(BaseController):

@@ -58,7 +58,7 @@
 	<tr>
 	  <td>${h.age(commit.commit_date)}</td>
 	  <td>
-	  	${h.link_to(h.trunc(commit.message, 80), h.url("commit", repo=c.repo, id=commit.id))}
+	  	${h.link_to(h.trunc(commit.message, 80), h.url.current("commit", repo=c.repo, id=commit.id))}
 	  	${"".join(["[%s]" % heads.name for heads in commit.tags.values()])}
 	  	${"".join(["{%s}" % heads.name for heads in commit.heads])}
 	  </td>

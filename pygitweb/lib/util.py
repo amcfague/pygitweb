@@ -19,7 +19,7 @@ TYPES = {
     "040":'d',
     "100":'-',
     "120":'l',
-    "160":'s'}
+    "160":'m'}
 
 def create_path(*paths):
     join(*[path for path in paths if path])

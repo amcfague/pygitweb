@@ -17,7 +17,7 @@
     </tr>
     <tr>
       <td>commit</td>
-      <td>${h.link_to(c.commit.id, h.url("commit", repo=c.repo, id=c.commit.id))}</td>
+      <td>${h.link_to(c.commit.id, h.url.current())}</td>
     </tr>
     <tr>
       <td>tree</td>
@@ -26,13 +26,14 @@
 %for parent in c.commit.parents:
     <tr>
       <td>parent</td>
-      <td>${h.link_to(parent.id, h.url("commit", repo=c.repo, id=parent.id))}</td>
+      <td>${h.link_to(parent.id, h.url.current(id=parent.id))}</td>
     </tr>
 %endfor
 %for format in c.formats:
     <tr>
       <td>download</td>
-      <td>${h.link_to("%s-%s.%s" % (c.repo_name, c.commit.id, format), h.url("download", repo=c.repo, id=c.commit.id, format=format))}
+      <td>${h.link_to("%s-%s.%s" % (c.repo_name, c.commit.id, format) ,
+      			h.url("download", repo=c.repo, id=c.commit.id, format=format))}</td>
     </tr>
 %endfor
   </tbody>
