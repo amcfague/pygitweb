@@ -9,11 +9,11 @@
   <tbody>
     <tr>
       <td>author</td>
-      <td>${c.commit.author_name} &lt;${h.mail_to(c.commit.author_email, encode="hex")}&gt; (${h.asctime(c.commit.authored_date)})</td>
+      <td>${c.commit.author_name} &lt;${h.mail_to(c.commit.author_email, encode="hex")}&gt; (${c.commit.author_time})</td>
     </tr>
     <tr>
       <td>committer</td>
-      <td>${c.commit.committer_name} &lt;${h.mail_to(c.commit.committer_email, encode="hex")}&gt; (${h.asctime(c.commit.commit_date)})</td>
+      <td>${c.commit.committer_name} &lt;${h.mail_to(c.commit.committer_email, encode="hex")}&gt; (${c.commit.commit_time})</td>
     </tr>
     <tr>
       <td>commit</td>
@@ -21,18 +21,18 @@
     </tr>
     <tr>
       <td>tree</td>
-      <td>${h.link_to(c.commit.tree.id, h.url("tree", repo=c.repo, id=c.commit.id))}</td>
+      <td>${h.link_to(c.commit.tree, h.url("tree", repo=c.repo, id=c.commit.id))}</td>
     </tr>
 %for parent in c.commit.parents:
     <tr>
       <td>parent</td>
-      <td>${h.link_to(parent.id, h.url.current(id=parent.id))}</td>
+      <td>${h.link_to(parent, h.url.current(id=parent))}</td>
     </tr>
 %endfor
 %for format in c.formats:
     <tr>
       <td>download</td>
-      <td>${h.link_to("%s-%s.%s" % (c.repo_name, c.commit.id, format) ,
+      <td>${h.link_to("%s-%s.%s" % (c.repo, c.commit.id, format) ,
       			h.url("download", repo=c.repo, id=c.commit.id, format=format))}</td>
     </tr>
 %endfor
@@ -43,61 +43,12 @@
 <strong>${c.commit.summary}</strong><br />
 <pre>${h.trim_first_line(c.commit.message)}</pre>
 <br />
-<br />
-${c.commit.files_changed} files changed, ${c.commit.insertions} insertions, ${c.commit.deletions} deletions
-</p>
-
-<table class="diffstat">
-  <tbody>
-%for diff in c.commit.diffs:
-%  	if diff.renamed:
-	<tr>
-	  <td>${h.oct_to_sym(diff.b_mode)}</td>
-	  <td>${diff.rename_to}(renamed from ${diff.rename_from})</td>
-	  <td>${diff.lines}</td>
-	  <td class="graph">
-	  	<table summary="file diffstat" style="width: 500px;">
-	  	  <tr>
-	  	    <td class="add" style="width: ${diff.insertions * 100 / diff.total_lines}%;"/>
-	  	    <td class="rem" style="width: ${diff.deletions * 100 / diff.total_lines}%;"/>
-	  	  </tr>
-	  	</table>
-	  </td>
-	</tr>
-%	elif diff.deleted_file:
-	<tr>
-	  <td>-------</td>
-	  <td>${diff.a_path}</td>
-	  <td>${diff.lines}</td>
-	  <td class="graph">
-	  	<table summary="file diffstat" style="width: 500px;">
-	  	  <tr>
-	  	    <td class="add" style="width: ${diff.insertions * 100 / diff.total_lines}%;"/>
-	  	    <td class="rem" style="width: ${diff.deletions * 100 / diff.total_lines}%;"/>
-	  	  </tr>
-	  	</table>
-	  </td>
-	</tr>
+%for diff in c.diffs:
+${diff.name_a}<br/>
+%	if h.istext(diff.diff):
+${h.highlight_diff("".join(diff.diff)) | n}<br/>
 %	else:
-	<tr>
-	  <td>${h.oct_to_sym(diff.b_mode)}</td>
-	  <td>${diff.b_path}</td>
-	  <td>${diff.lines}</td>
-	  <td class="graph">
-	  	<table summary="file diffstat" style="width: ${100 if diff.max_changes > 100 else diff.max_changes}%;">
-	  	  <tr>
-	  	    <td class="add" style="width: ${diff.insertions * 100.0 / diff.max_changes}%;"/>
-	  	    <td class="rem" style="width: ${diff.deletions * 100.0 / diff.max_changes}%;"/>
-	  	    <td class="none" style="width: ${(diff.max_changes - diff.lines) * 100.0 / diff.max_changes}%;"/>
-	  	  </tr>
-	  	</table>
-	  </td>
-	</tr>
-%	endif
-%endfor
-  </tbody>
-</table>
+<i>Binary file differs.</i><br/>
 <br/>
-%for commit in c.commit.diffs:
-${h.highlight_diff(commit.diff) | n}
+%	endif
 %endfor

@@ -63,8 +63,9 @@ def age(commit_time):
         return int(round(num))
     
     # Convert and calculate the timedelta
-    seconds = time() - mktime(commit_time)
-
+    delta = datetime.today() - commit_time
+    
+    seconds = (delta.microseconds + (delta.seconds + delta.days * 24 * 3600) * 10**6) / 10**6
     if seconds < 120:
         return "1 minute"
     if seconds < 3600:
@@ -113,3 +114,38 @@ def oct_to_sym(str_perms):
 
 def count_lines(msg):
     return string.count(msg, '\n')
+
+text_characters = "".join(map(chr, range(32, 127)) + list("\n\r\t\b"))
+_null_trans = string.maketrans("", "")
+def istext(s):
+    if "\0" in s:
+        return False
+    
+    if not s:  # Empty files are considered text
+        return True
+
+    # Only use the first 1024 (1KB)--we're not sure how big the file is, and we
+    #    don't want to read a massive file into memory for this.
+    s = s[:1024]
+
+    # Get the non-text characters (maps a character to itself then
+    # use the 'remove' option to get rid of the text characters.)
+    t = s.translate(_null_trans, text_characters)
+
+    # If more than 30% non-text characters, then
+    # this is considered a binary file
+    return len(t)/len(s) < 0.30
+
+
+FILTER=''.join([(len(repr(chr(x)))==3) and chr(x) or '.' for x in range(256)])
+def hex_dump(src, length=8):
+    i = 0
+    result = ''
+    while src:
+       s, src = src[:length], src[length:]
+       hexa = ' '.join(["%02X" % ord(x) for x in s])
+       s = s.translate(FILTER)
+       result += "%04X   %-*s   %s\n" % (i, length*3, hexa, s)
+       i+=length
+
+    return result

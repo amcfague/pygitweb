@@ -11,17 +11,17 @@
     </tr>
   </thead>
   <tbody>
-%for branch in c.repo_obj.branches:
+%for branch_name, commit in c.repo_obj.branches.items()[:10]:
 	<tr>
-	  <td>${branch.name}</td>
-	  <td>${h.trunc(branch.commit.message, 80)}</td>
-	  <td>${branch.commit.author_name}</td>
-	  <td>${h.age(branch.commit.commit_date)}</td>
+	  <td>${branch_name}</td>
+	  <td>${h.trunc(commit.summary, 80)}</td>
+	  <td>${commit.author_name}</td>
+	  <td>${h.age(commit.commit_time)}</td>
 	</tr>
 %endfor
   </tbody>
 </table>
-<br />
+<br/>
 <table cellpadding="2" border="1" cellspacing="4">
   <thead>
     <tr>
@@ -32,17 +32,17 @@
     </tr>
   </thead>
   <tbody>
-%for tag in c.repo_obj.latest_tags():
+%for tag_name, tag_obj in c.repo_obj.tags.items()[:10]:
     <tr>
-      <td>${tag.name}</td>
-      <td>${tag.commit.id}</td>
-      <td>${tag.commit.author_name}</td>
-      <td>${h.age(tag.commit.commit_date)}</td>
+      <td>${tag_name}</td>
+      <td>pygitweb-${tag_name}</td>
+      <td>${tag_obj.tagger_name}</td>
+      <td>${h.age(tag_obj.tag_time)}</td>
     </tr>
 %endfor
   </tbody>
 </table>
-<br />
+<br/>
 <table cellpadding="2" border="1" cellspacing="4">
   <thead>
     <tr>
@@ -54,18 +54,14 @@
     </tr>
   </thead>
   <tbody>
-%for commit in c.repo_obj.latest_commits(10):
-	<tr>
-	  <td>${h.age(commit.commit_date)}</td>
-	  <td>
-	  	${h.link_to(h.trunc(commit.message, 80), h.url.current("commit", repo=c.repo, id=commit.id))}
-	  	${"".join(["[%s]" % heads.name for heads in commit.tags.values()])}
-	  	${"".join(["{%s}" % heads.name for heads in commit.heads])}
-	  </td>
-	  <td>${commit.author_name}</td>
-	  <td>${commit.files_changed}</td>
-	  <td>-${commit.deletions}/+${commit.insertions}</td>
-	</tr>
+%for commit in c.repo_obj.list_shas(count=10):
+    <tr>
+      <td>${h.age(commit.commit_time)}</td>
+      <td>${h.link_to(h.trunc(commit.summary, 80), h.url("commit", id=commit.id, repo=c.repo))}</td>
+      <td>${commit.author_name}</td>
+      <td></td>
+      <td></td>
+    </tr>
 %endfor
   </tbody>
 </table>

@@ -27,24 +27,24 @@ class RepositoryController(BaseController):
             raise Exception("Repository `%s' not found" % repo)
         
         self.repo_obj = g.repos[repo]
+        c.repo_obj = self.repo_obj
         c.repo = repo
 
     def summary(self):
-        c.repo_obj = self.repo_obj
         return render("repository/summary.tmpl")
     
     def commit(self, id=None):
         if not id:
             raise Exception("No ID hash specified.")
         
-        c.commit = self.repo_obj.commit(id)
         c.formats = g.formats
-        c.repo_name = self.repo_name.split('/')[-1].rstrip('.git')
+        c.commit = self.repo_obj[id]
+        c.diffs = self.repo_obj.diffs(id)
         return render("repository/commit.tmpl")
 
     def tree(self, path=""):
         id = request.params.get('id', 'master')
-        obj = self.repo_obj.tree(id)
+        obj = self.repo_obj[id]
         
         if path:
             path = path.rstrip('/')
@@ -70,7 +70,6 @@ class RepositoryController(BaseController):
         
         # This will display the filename on the browser download dialog
         response.content_disposition = "attachment; filename=%s" % filename
-        
         func_name = "self.repo_obj.archive_%s" % format.replace('.', '_')
         response.content_type, compressed_data = eval(func_name)(id)
         return compressed_data

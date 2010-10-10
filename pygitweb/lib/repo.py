@@ -1,263 +1,196 @@
 import logging
-from git import Repo, Commit, Tag
 from os.path import join
-from time import asctime
-from string import count
-from cStringIO import StringIO
+import re
+import dulwich
+from datetime import datetime
+from operator import attrgetter
+from difflib import unified_diff
 
 log = logging.getLogger(__name__)
 
 class PyGitRepo(object):
     def __init__(self, repo_path):
-        self.repo_obj = Repo(repo_path)
-        self.branches = [PyGitHead(branch) for branch in self.repo_obj.branches] 
+        self.repo_obj = dulwich.repo.Repo(repo_path)
         
-        try:
-            self.owner = open(join(repo_path, 'owner')).read().strip()
-        except IOError:
-            self.owner = ""
-
-    @property
-    def last_change(self):
-        return self.latest_commits(1)[0]
-
-    def latest_commits(self, count=10):
-        try:
-            # Get the lastest COUNT commits
-            commits = self.repo_obj.git.rev_list(
-                    all=True, max_count=count, date_order=True).split('\n')
-        except Exception as exc:
-            # If we fail, log it and return an empty list
-            log.exception(exc)
-            return []
+        # setup the references
+        self._parse_refs()
         
-        # Create commits
-        return [self.commit(commit) for commit in commits]
-        return [PyGitCommit(Commit(self.repo_obj, commit)) for commit in commits]
+        # dulwich has no idea what the owner is; do it separately
+        self.owner = self._read_named_file("owner")
+        self.description = self._read_named_file("description")
 
-    def latest_tags(self, count=10):
-        try:
-            # Get the latest COUNT tags
-            tags = self.repo_obj.git.rev_list(tags=True, max_count=count,
-                            no_walk=True, date_order=True).split('\n')
-        except Exception as exc:
-            log.exception(exc)
-            return []
-        
-        return [PyGitTag(self.repo_obj, Tag(self.repo_obj.git.describe(tag), tag)) for tag in tags]
+    def _read_named_file(self, path):
+        fd = self.repo_obj.get_named_file(path)
+        if fd:
+            return fd.read().strip()
+        return ""
 
-    def commit(self, id):
-        # Get the commit object
-        commit_obj = self.repo_obj.commit(id)
-        
-        # Generate the tags
-        tags = {}
-        for tag in self.repo_obj.tags:
-            if tag.commit.id == id:
-                tags[tag.commit.id] = PyGitTag(self.repo_obj, tag)
-        
-        # Generate the heads
-        heads = [head for head in self.repo_obj.heads if head.commit.id == id]
-        
-        # Return a generated commit
-        return PyGitCommit(commit_obj, tags=tags, heads=heads)
+    def _parse_refs(self):
+        # Parse out the branches and tags on creation, so that we won't have
+        #    to do these on the fly when we want to display them.  This should
+        #    get called whenever the refs are updated.
+        self.branches = {}
+        self.tags = {}
+        for ref, sha in self.repo_obj.get_refs().items():
+            if ref.startswith('refs/tags/'):
+                # Get the commit the tag points at
+                self.tags[ref[10:]] = PyGitTag(self.repo_obj[sha])
+            elif ref.startswith('refs/heads/'):
+                # a head always points at a commit
+                self.branches[ref[11:]] = PyGitCommit(self.repo_obj[sha])
+            else:
+                # We should only ever have heads and tags, but just in case...
+                log.warn("Unknown reference: %s (%s)", ref, sha)
 
-    def tree(self, id):
-        # Get the tree object
-        tree_obj = self.repo_obj.tree(id)
-        return PyGitTree(tree_obj)
-
-    def blob(self, id):
-        # Get the blob object
-        blob_obj = Blob(self.repo_obj, id)
-        return PyGitBlob(blob_obj)
+    def list_shas(self, head='refs/heads/master', count=50, offset=None):
+        already_seen = {}
+        array = []
+        shas = [self.repo_obj[head]]
+        while shas:
+            # Sort and grab the last item, the newest
+            shas.sort(key=attrgetter('commit_time'))
+            sha = shas.pop()
+            
+            # Skip if we've already visited this sha
+            if sha in already_seen:
+                continue
     
+            # Doesn't matter what this gets set to, as long as the key exists
+            already_seen[sha] = None
+    
+            # If we have an offset, check here
+            if not offset or len(already_seen) >= offset:
+                array.append(sha)
+                
+            # If we have enough elements, return them
+            if len(array) == count:
+                break
+            shas.extend([self.repo_obj[s] for s in sha.parents])
+            
+        return [PyGitCommit(i) for i in array]
+
+    def diffs(self, id_a, id_b=None):
+        class Diff(object):
+            new_file = False
+            deleted = False
+            diff = None
+            insertions = 0
+            deletions = 0
+            id_a = None
+            id_b = None
+            blob_a = []
+            blob_b = []
+            name_a = None
+            name_b = None
+            
+            @property
+            def diff(self):
+                return "".join(unified_diff(self.blob_a, self.blob_b, join('a', self.name_a), join('b', self.name_b)))
+        
+        commit_a = self.repo_obj[id_a]
+        if not id_b:
+            id_b = commit_a.parents[0]
+        commit_b = self.repo_obj[id_b]
+        
+        if commit_a.commit_time > commit_b.commit_time:
+            commit_a, commit_b = commit_b, commit_a
+        
+        tree_a = commit_a.tree
+        tree_b = commit_b.tree
+        
+        diffs = []
+        for ((name_a, name_b), (mode_a, mode_b), (id_a, id_b)) \
+                in self.repo_obj.object_store.tree_changes(tree_a, tree_b):
+            d = Diff()
+            d.name_a = name_a or "dev/null"
+            d.name_b = name_b or "dev/null"
+            d.mode_a = mode_a
+            d.mode_b = mode_b
+            d.id_a = id_a
+            d.id_b = id_b
+            if id_a:
+                d.blob_a = self.repo_obj[id_a].data.splitlines(1)
+            if id_b:
+                d.blob_b = self.repo_obj[id_b].data.splitlines(1)
+            diffs.append(d)
+        return diffs
+
     def archive_tar_gz(self, id):
         return "application/x-compressed", self.repo_obj.archive_tar_gz(id)
     def archive_tar_bz2(self, id):
         from bz2 import compress
+        print dir(self.repo_obj)
         return "application/bzip2", compress(self.repo_obj.archive_tar(id))
     def archive_zip(self, id):
         return "application/zip", self.repo_obj.git.archive(id, format="zip")
-    
-    @property
-    def description(self):
-        return self.repo_obj.description
 
+    def __getitem__(self, key):
+        val = self.repo_obj[key]
+        if val.type == 1:
+            return PyGitCommit(val)
+        return val
+    
     def __repr__(self):
         return "<PyGitRepo path='%s'>" % self.repo_obj.path
 
 class PyGitCommit(object):
-    def __init__(self, commit_obj, tags={}, heads={}):
+    def __init__(self, commit_obj):
         self.commit_obj = commit_obj
-        self.tags = tags
-        self.heads = heads
         
-    @property
-    def author_name(self):
-        return self.commit_obj.author.name
-    @property
-    def author_email(self):
-        return self.commit_obj.author.email
-    @property
-    def authored_date(self):
-        return self.commit_obj.authored_date
-    @property
-    def committer_name(self):
-        return self.commit_obj.committer.name
-    @property
-    def committer_email(self):
-        return self.commit_obj.committer.email
-    @property
-    def commit_date(self):
-        return self.commit_obj.committed_date
-    @property
-    def summary(self):
-        return self.commit_obj.summary
-    @property
-    def message(self):
-        return self.commit_obj.message
-    @property
-    def deletions(self):
-        return self.commit_obj.stats.total['deletions']
-    @property
-    def insertions(self):
-        return self.commit_obj.stats.total['insertions']
-    @property
-    def files_changed(self):
-        return self.commit_obj.stats.total['files']
-    @property
-    def id(self):
-        return self.commit_obj.id
-    @property
-    def tree(self):
-        return PyGitTree(self.commit_obj.tree)
-    @property
-    def parents(self):
-        return [PyGitCommit(parent) for parent in self.commit_obj.parents]
-    @property
-    def diffs(self):
-        return [PyGitDiff(diff, self.commit_obj.stats, self.commit_obj.tree) for diff in self.commit_obj.diffs]
-    @property
-    def mode(self):
-        return self.commit_obj.mode
-    
-    def __repr__(self):
-        return str("<PyGitCommit id='%s'>" % self.commit_obj.id)
-
-def get_blob(tree_obj, path):
-    blob = tree_obj
-    for p in path.split('/'):
-        blob = blob.get(p)
-    return blob
-
-class PyGitDiff(object):
-    def __init__(self, diff_obj, stats_obj, tree_obj):
-        self.diff_obj = diff_obj
-        self.stats_obj = stats_obj
+        # Several fields use this regex
+        regex = re.compile(r'^(?P<name>.*) <(?P<email>.*)>$')
         
-        self.blob_obj = get_blob(tree_obj, diff_obj.b_path)
-        self.mode = diff_obj.b_mode or diff_obj.a_mode or self.blob_obj.mode
-        self.total_lines = len(StringIO(self.blob_obj.data).readlines())
-        self.max_changes = 0
-        if self.lines > self.max_changes:
-            self.max_changes = self.lines
-    
-    @property
-    def a_commit(self):
-        return self.diff_obj.a_commit
-    @property
-    def a_mode(self):
-        if self.diff_obj.a_mode:
-            return self.diff_obj.a_mode
-        return self.mode
-    @property
-    def a_path(self):
-        return self.diff_obj.a_path
-    @property
-    def b_commit(self):
-        return self.diff_obj.b_commit
-    @property
-    def b_mode(self):
-        if self.diff_obj.b_mode:
-            return self.diff_obj.b_mode
-        return self.mode
-    @property
-    def b_path(self):
-        return self.diff_obj.b_path
-    @property
-    def deleted_file(self):
-        return self.diff_obj.deleted_file
-    @property
-    def diff(self):
-        return self.diff_obj.diff
-    @property
-    def new_file(self):
-        return self.diff_obj.new_file
-    @property
-    def rename_from(self):
-        return self.diff_obj.rename_from
-    @property
-    def rename_to(self):
-        return self.diff_obj.rename_to
-    @property
-    def renamed(self):
-        return self.diff_obj.renamed
-    @property
-    def deletions(self):
-        return self.stats_obj.files[self.b_path]["deletions"]
-    @property
-    def insertions(self):
-        return self.stats_obj.files[self.b_path]["insertions"]
-    @property
-    def lines(self):
-        return self.stats_obj.files[self.b_path]["lines"]
-
-class PyGitTree(object):
-    def __init__(self, tree_obj):
-        self.tree_obj = tree_obj
-    
-    def get(self, key):
-        return self.tree_obj.get(key)
-    def items(self):
-        return self.tree_obj.items()
-    def keys(self):
-        return self.tree_obj.keys()
-    def values(self):
-        return self.tree_obj.values()
-    @property
-    def id(self):
-        return self.tree_obj.id
-
-class PyGitBlob(object):
-    pass
-
-class PyGitHead(object):
-    def __init__(self, head_obj):
-        self.head_obj = head_obj
-        self.commit_obj = PyGitCommit(head_obj.commit)
-    
-    @property
-    def name(self):
-        return self.head_obj.name
-    
-    @property
-    def commit(self):
-        return self.commit_obj
-    
-    def __repr__(self):
-        return str("<PyGitHead id='%s'>" % self.head_obj.name)
+        # Parse out the author
+        author = regex.match(commit_obj.author).groupdict()
+        self.author_name = author['name']
+        self.author_email = author['email']
+        
+        # Parse out the committer
+        committer = regex.match(commit_obj.committer).groupdict()
+        self.committer_name = committer['name']
+        self.committer_email = committer['email']
+        
+        # Timestamps are in unix format; convert them to something readable
+        # TODO: We have access to the timezone (author_timezone, etc.), but
+        #        this is not used anywhere; should we include it?  By default,
+        #        its in GMT.
+        self.author_time = datetime.fromtimestamp(commit_obj.author_time)
+        self.commit_time = datetime.fromtimestamp(commit_obj.commit_time)
+        
+        # Split up the summary and the message
+        first_nl = commit_obj.message.find('\n')
+        self.summary = commit_obj.message[:first_nl].strip()
+        self.message = commit_obj.message[first_nl+1:].strip()
+        
+        self.id = commit_obj.id
+        self.tree = commit_obj.tree
+        self.parents = commit_obj.parents
+        
+    def __cmp__(self, obj):
+        return cmp(self.commit_obj.commit_time, obj.commit_obj.commit_time)
 
 class PyGitTag(object):
-    def __init__(self, repo_obj, tag_obj):
-        self.tag_obj = tag_obj
+    def __init__(self, tag_obj):
+        # Several fields use this regex
+        regex = re.compile(r'^(?P<name>.*) <(?P<email>.*)>$')
 
-        # The commit in the tag is just a hash--not a commit object
-        self.commit_obj = PyGitCommit(Commit(repo_obj, tag_obj.commit))
-    
-    @property
-    def name(self):
-        return self.tag_obj.name
-    @property
-    def commit(self):
-        return self.commit_obj
+        # A tag can either be a lightweight tag (literally, a commit), or a
+        #    real tag (a reference to a commit, with tag info)
+        if tag_obj.type_name == "tag":
+            self.tag_time = datetime.fromtimestamp(tag_obj.tag_time) 
+            tagger = regex.match(tag_obj.tagger).groupdict()
+        else:
+            self.tag_time = datetime.fromtimestamp(tag_obj.author_time)
+            tagger = regex.match(tag_obj.author).groupdict()
+
+        self.tagger_name = tagger['name']
+        self.tagger_email = tagger['email']
+        self.id = tag_obj.id
+
+class PyGitDiff(object):
+    def __init__(self, blob_a, mode_a, blob_b, mode_b):
+        # Get the two trees
+        self.mode_a = mode_a
+        self.mode_b = mode_b
+        self.diff = "".join(unified_diff(
+                                blob_a.splitlines(1), blob_b.splitlines(1)))

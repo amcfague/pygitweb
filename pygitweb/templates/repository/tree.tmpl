@@ -12,7 +12,7 @@ Currently browsing root / <strong>${c.path}</strong><br />
     </tr>
   </thead>
   <tbody>
-%for k, v in sorted(c.tree.items()):
+%for k, v in sorted(c.tree.entries()):
     <tr>
       <td width="10%">${h.oct_to_sym(v.mode)}</td>
       <td width="50%">${h.link_to(k, h.url.current(path=h.join(c.path, k)))}</td>
