@@ -21,7 +21,7 @@
     </tr>
     <tr>
       <td>tree</td>
-      <td>${h.link_to(c.commit.tree, h.url("tree", repo=c.repo, id=c.commit.id))}</td>
+      <td>${h.link_to(c.commit.tree, h.url("tree", repo=c.repo, id=c.commit.tree))}</td>
     </tr>
 %for parent in c.commit.parents:
     <tr>

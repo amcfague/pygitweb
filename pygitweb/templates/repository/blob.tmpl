@@ -4,5 +4,6 @@
     ${h.stylesheet_link("/css/highlight.css")}
     ${h.stylesheet_link("/css/graph.css")}
 </%def>
-<b>${c.blob.name}</b><br/>
-${h.highlight_blob(c.blob) | n}
+${c.blob_obj.sha()}<br/>
+<b>${dir(c.blob_obj.sha())}</b><br/>
+

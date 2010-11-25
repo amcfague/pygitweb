@@ -1,23 +1,36 @@
 # -*- coding: utf-8 -*-
 <%inherit file="/base.tmpl" />
 
-Currently browsing root / <strong>${c.path}</strong><br />
+<%def name="head_tags()">
+    ${h.javascript_link(h.url("/javascripts/jquery-1.4.2.js"))}
+    ${h.javascript_link(h.url("/javascripts/jquery.tablesorter.js"))}
+    ${h.javascript_link(h.url("/javascripts/jquery.metadata.js"))}
+
+
+    <script type="text/javascript">
+        $(document).ready( function() {
+            $("table.zebra-stripe tr:even").addClass("alt");
+        } );
+    </script>
+</%def>
+
+Currently browsing <code>/${c.path}</code><br />
 <br />
-<table cellspacing="0" cellpadding="0" border="0" width="100%">
+<table id="files" class="zebra-stripe" cellspacing="0" cellpadding="0" border="0" width="100%">
   <thead>
     <tr align="left">
-      <th>Mode</th>
+      <th width='100px'>Mode</th>
       <th>Name</th>
       <th>Size</th>
     </tr>
   </thead>
   <tbody>
-%for k, v in sorted(c.tree.entries()):
-    <tr>
-      <td width="10%">${h.oct_to_sym(v.mode)}</td>
-      <td width="50%">${h.link_to(k, h.url.current(path=h.join(c.path, k)))}</td>
-      <td width="40%">${v.size if 'size' in dir(v) else '-'}</td>
-    </tr>
-%endfor
+% for (filename, permissions, id) in c.tree_obj.iteritems():
+  <tr>
+    <td><code>${h.oct_to_sym(permissions)}</code></td>
+    <td>${h.link_to(filename, h.url("tree", repo=c.repo, path=h.join(c.path, filename), id=c.id))}</td>
+    <td>${c.tree_obj.type}</td>
+  </tr>
+% endfor
   </tbody>
 </table>

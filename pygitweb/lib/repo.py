@@ -5,8 +5,46 @@ import dulwich
 from datetime import datetime
 from operator import attrgetter
 from difflib import unified_diff
+import tarfile
+from cStringIO import StringIO
+from time import time
 
 log = logging.getLogger(__name__)
+
+def compress(repo_obj, id, mode="w:gz"):
+    output = StringIO()
+    tf = tarfile.open(fileobj=output, mode=mode)
+    
+    # Get the tree
+    obj = repo_obj[id]
+    if obj.type == 1:
+        obj = repo_obj[obj.tree]
+    
+    now = time()
+    for (path, mode, blob_id) in repo_obj.object_store.iter_tree_contents(obj.id):
+        # We need to create the file object
+        data = repo_obj[blob_id].data
+        file_obj = StringIO(data)
+        
+        # Create a tarinfo file
+        ti = tarfile.TarInfo(path)
+        
+        # Extract the octal values for the file permissions
+        ti.mode = mode & 511
+        ti.size = len(data)
+        ti.type = tarfile.REGTYPE
+        ti.mtime = now
+        
+        # Add the data with the associated ti info
+        tf.addfile(ti, file_obj)
+    
+    # Close and write it out to the buffer
+    tf.close()
+    
+    # Put the output file pointer back to the beginning
+    output.seek(0)
+    
+    return output
 
 class PyGitRepo(object):
     def __init__(self, repo_path):
@@ -114,15 +152,12 @@ class PyGitRepo(object):
                 d.blob_b = self.repo_obj[id_b].data.splitlines(1)
             diffs.append(d)
         return diffs
-
+    
     def archive_tar_gz(self, id):
-        return "application/x-compressed", self.repo_obj.archive_tar_gz(id)
+        return "application/x-gzip", compress(self.repo_obj, id, "w:gz")
+
     def archive_tar_bz2(self, id):
-        from bz2 import compress
-        print dir(self.repo_obj)
-        return "application/bzip2", compress(self.repo_obj.archive_tar(id))
-    def archive_zip(self, id):
-        return "application/zip", self.repo_obj.git.archive(id, format="zip")
+        return "application/bzip2", compress(self.repo_obj, id, "w:bz2")
 
     def __getitem__(self, key):
         val = self.repo_obj[key]

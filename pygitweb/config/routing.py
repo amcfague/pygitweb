@@ -23,9 +23,9 @@ def make_map(config):
     map.connect('commit', '/{repo:.*?}/commit/{id}', controller="repository", action="commit")
     map.connect('download', '/{repo:.*?}/download/{id}', controller="repository", action="download")
     map.connect('summary', '/{repo:.*?}/summary', controller="repository", action="summary")
-    map.connect("tree", '/{repo:.*?}/tree/{path:.*}', controller="repository", action="tree", path="")
+    map.connect('tree', '/{repo:.*?}/tree/{path:.*}', controller="repository", action="tree", path=None)
     
     # Utility routes
-    map.connect('/{repo:.*?}/tree', controller="repository", action="tree", path="")
+    map.connect('/{repo:.*?}/tree', controller="repository", action="tree", path=None)
 
     return map

@@ -4,6 +4,7 @@ from time import time, mktime, timezone
 from operator import itemgetter
 from os.path import join
 import string
+from stat import S_ISDIR
 
 PERMISSIONS = {
     "0": "---",
@@ -16,8 +17,10 @@ PERMISSIONS = {
     "7": "rwx"}
 
 TYPES = {
+    "000":'-',
+    "400":'!',
     "040":'d',
-    "100":'-',
+    "010":'-',
     "120":'l',
     "160":'m'}
 
@@ -89,11 +92,6 @@ def age(commit_time):
     
     return "%d months" % _round(days / 30)
 
-def is_dir(mode):
-    from stat import S_ISDIR
-    from string import atoi
-    return S_ISDIR(atoi(mode, 8))
-
 def trim_first_line(msg):
     pos = string.find(msg, '\n')
     if pos == -1:
@@ -102,7 +100,7 @@ def trim_first_line(msg):
 
 def oct_to_sym(str_perms):
     if not isinstance(str_perms, str):
-        raise Exception("Permissions must be a string.")
+        str_perms = oct(str_perms)
     
     perms = str_perms[-3:]
     type = str_perms[:3]
