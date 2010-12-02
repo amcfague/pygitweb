@@ -58,13 +58,14 @@ class RepositoryController(BaseController):
         response.content_type, compressed_data = eval(func_name)(id)
         return compressed_data
     
-    def tree(self, path=None):
+    def tree(self, path=""):
         c.path = path
         c.id = request.params.get('id', 'master')
-        
+
         # Get the path based on the root tree
         perms, id = tree_lookup_path(self.repo_obj.repo_obj.get_object, c.id, c.path)
         obj = self.repo_obj[id]
+        
 
         # 2 = tree
         # 3 = blob
@@ -74,13 +75,6 @@ class RepositoryController(BaseController):
         else:
             c.blob_obj = obj
             return render('repository/blob.tmpl')
-        
-
-
-    def blob(self, id):
-        raise Exception(id)
-        c.blob_obj = self.repo_obj[id]
-        return render('repository/blob.tmpl')
 
 #class RepositoryController(BaseController):
 #    def __before__(self):

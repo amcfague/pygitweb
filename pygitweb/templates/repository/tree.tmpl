@@ -29,7 +29,7 @@ Currently browsing <code>/${c.path}</code><br />
   <tr>
     <td><code>${h.oct_to_sym(permissions)}</code></td>
     <td>${h.link_to(filename, h.url("tree", repo=c.repo, path=h.join(c.path, filename), id=c.id))}</td>
-    <td>${c.tree_obj.type}</td>
+    <td>${c.repo_obj[id].raw_length()}</td>
   </tr>
 % endfor
   </tbody>

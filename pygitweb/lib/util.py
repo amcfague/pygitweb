@@ -32,22 +32,19 @@ def highlight_diff(diff):
     formatter = pygments.formatters.HtmlFormatter()
     return pygments.highlight(diff, lexer, formatter)
 
-def highlight_blob(blob):
+def highlight_blob(name, data):
     def get_lexer():
-        try: return pygments.lexers.get_lexer_for_mimetype(blob.mime_type)
+        try: return pygments.lexers.get_lexer_for_filename(name)
         except pygments.util.ClassNotFound: pass
         
-        try: return pygments.lexers.get_lexer_for_filename(blob.name)
-        except pygments.util.ClassNotFound: pass
-        
-        try: return pygments.lexers.guess_lexer(blob.data)
+        try: return pygments.lexers.guess_lexer(data)
         except pygments.util.ClassNotFound: pass
         
         return pygments.lexers.TextLexer()
 
     lexer = get_lexer()
     formatter = pygments.formatters.HtmlFormatter(linenos=True)
-    return pygments.highlight(blob.data, lexer, formatter)
+    return pygments.highlight(data, lexer, formatter)
 
 def trunc(str, max_length):
     if len(str) < max_length:

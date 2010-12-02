@@ -146,6 +146,8 @@ class PyGitRepo(object):
             d.mode_b = mode_b
             d.id_a = id_a
             d.id_b = id_b
+            d.deleted = True if not name_b else False
+            d.new_file = True if not name_a else False
             if id_a:
                 d.blob_a = self.repo_obj[id_a].data.splitlines(1)
             if id_b:

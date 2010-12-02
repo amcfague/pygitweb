@@ -39,10 +39,29 @@
   </tbody>
 </table>
 <br />
+<br />
 <p>
 <strong>${c.commit.summary}</strong><br />
 <pre>${h.trim_first_line(c.commit.message)}</pre>
 <br />
+${dir(c.diffs[0])}<br/>
+<table>
+  <tbody>
+%for diff in c.diffs:
+    <tr>
+%  if diff.deleted:
+      <td bgcolor="red">${diff.name_a}</td>
+%  elif diff.new_file:
+      <td bgcolor="green">${diff.name_b}</td>
+%  elif diff.name_a != diff.name_b:
+      <td>${diff.name_a} -> ${diff.name_b}</td>
+%  endif
+    </tr>
+%endfor
+  </tbody>
+</table>
+<br/>
+<br/>
 %for diff in c.diffs:
 ${diff.name_a}<br/>
 %	if h.istext(diff.diff):
