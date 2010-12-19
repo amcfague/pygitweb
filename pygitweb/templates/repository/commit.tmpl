@@ -38,13 +38,9 @@
 %endfor
   </tbody>
 </table>
-<br />
-<br />
 <p>
 <strong>${c.commit.summary}</strong><br />
 <pre>${h.trim_first_line(c.commit.message)}</pre>
-<br />
-${dir(c.diffs[0])}<br/>
 <table>
   <tbody>
 %for diff in c.diffs:
@@ -55,6 +51,8 @@ ${dir(c.diffs[0])}<br/>
       <td bgcolor="green">${diff.name_b}</td>
 %  elif diff.name_a != diff.name_b:
       <td>${diff.name_a} -> ${diff.name_b}</td>
+%  else:
+	  <td>${diff.name_a} (+${diff.insertions}/-${diff.deletions})</td>
 %  endif
     </tr>
 %endfor

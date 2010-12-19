@@ -46,6 +46,7 @@ def compress(repo_obj, id, mode="w:gz"):
     
     return output
 
+
 class PyGitRepo(object):
     def __init__(self, repo_path):
         self.repo_obj = dulwich.repo.Repo(repo_path)
@@ -108,23 +109,6 @@ class PyGitRepo(object):
         return [PyGitCommit(i) for i in array]
 
     def diffs(self, id_a, id_b=None):
-        class Diff(object):
-            new_file = False
-            deleted = False
-            diff = None
-            insertions = 0
-            deletions = 0
-            id_a = None
-            id_b = None
-            blob_a = []
-            blob_b = []
-            name_a = None
-            name_b = None
-            
-            @property
-            def diff(self):
-                return "".join(unified_diff(self.blob_a, self.blob_b, join('a', self.name_a), join('b', self.name_b)))
-        
         commit_a = self.repo_obj[id_a]
         if not id_b:
             id_b = commit_a.parents[0]
@@ -139,19 +123,10 @@ class PyGitRepo(object):
         diffs = []
         for ((name_a, name_b), (mode_a, mode_b), (id_a, id_b)) \
                 in self.repo_obj.object_store.tree_changes(tree_a, tree_b):
-            d = Diff()
-            d.name_a = name_a or "dev/null"
-            d.name_b = name_b or "dev/null"
+            d = Diff(self.repo_obj, name_a, name_b,
+                     id_a, id_b)
             d.mode_a = mode_a
             d.mode_b = mode_b
-            d.id_a = id_a
-            d.id_b = id_b
-            d.deleted = True if not name_b else False
-            d.new_file = True if not name_a else False
-            if id_a:
-                d.blob_a = self.repo_obj[id_a].data.splitlines(1)
-            if id_b:
-                d.blob_b = self.repo_obj[id_b].data.splitlines(1)
             diffs.append(d)
         return diffs
     
@@ -169,6 +144,33 @@ class PyGitRepo(object):
     
     def __repr__(self):
         return "<PyGitRepo path='%s'>" % self.repo_obj.path
+
+class Diff(object):
+    mode_a = None
+    mode_b = None
+    def __init__(self, repo_obj, name_a, name_b, id_a, id_b):
+        self.new_file = False if name_a else True
+        self.deleted = False if name_b else True
+        
+        self.name_a = name_a or "dev/null"
+        self.name_b = name_b or "dev/null"
+        self.id_a = id_a
+        self.id_b = id_b
+        
+        # Calculate the diffs
+        blob_a = repo_obj[id_a].data.splitlines(1) if id_a else ""
+        blob_b = repo_obj[id_b].data.splitlines(1) if id_b else ""
+        
+        self.insertions = 0
+        self.deletions = 0
+        udiff = [i for i in unified_diff(blob_a, blob_b, join('a', name_a), join('b', name_b), n=3)]
+        for line in udiff[3:]:
+            if line[0] == '+':
+                self.insertions = self.insertions + 1
+            elif line[0] == '-':
+                self.deletions = self.deletions + 1
+        self.diff = "".join(udiff)
+
 
 class PyGitCommit(object):
     def __init__(self, commit_obj):
