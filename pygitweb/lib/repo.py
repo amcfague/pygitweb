@@ -124,9 +124,7 @@ class PyGitRepo(object):
         for ((name_a, name_b), (mode_a, mode_b), (id_a, id_b)) \
                 in self.repo_obj.object_store.tree_changes(tree_a, tree_b):
             d = Diff(self.repo_obj, name_a, name_b,
-                     id_a, id_b)
-            d.mode_a = mode_a
-            d.mode_b = mode_b
+                     id_a, id_b, mode_a, mode_b)
             diffs.append(d)
         return diffs
     
@@ -146,16 +144,21 @@ class PyGitRepo(object):
         return "<PyGitRepo path='%s'>" % self.repo_obj.path
 
 class Diff(object):
-    mode_a = None
-    mode_b = None
-    def __init__(self, repo_obj, name_a, name_b, id_a, id_b):
+    max_changes = 10
+    def __init__(self, repo_obj, name_a, name_b, id_a, id_b, mode_a, mode_b):
         self.new_file = False if name_a else True
         self.deleted = False if name_b else True
         
         self.name_a = name_a or "dev/null"
         self.name_b = name_b or "dev/null"
+        self.name = name_a or name_b
+        
         self.id_a = id_a
         self.id_b = id_b
+        self.id = id_a or id_b
+        
+        self.mode_a = mode_a
+        self.mode_b = mode_b
         
         # Calculate the diffs
         blob_a = repo_obj[id_a].data.splitlines(1) if id_a else ""
@@ -163,12 +166,13 @@ class Diff(object):
         
         self.insertions = 0
         self.deletions = 0
-        udiff = [i for i in unified_diff(blob_a, blob_b, join('a', name_a), join('b', name_b), n=3)]
+        udiff = [i for i in unified_diff(blob_a, blob_b, join('a', self.name_a), join('b', self.name_b), n=3)]
         for line in udiff[3:]:
             if line[0] == '+':
                 self.insertions = self.insertions + 1
             elif line[0] == '-':
                 self.deletions = self.deletions + 1
+        self.total_changes = self.deletions + self.insertions
         self.diff = "".join(udiff)
 
 

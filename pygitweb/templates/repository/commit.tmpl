@@ -41,27 +41,45 @@
 <p>
 <strong>${c.commit.summary}</strong><br />
 <pre>${h.trim_first_line(c.commit.message)}</pre>
-<table>
+<table class="diffstat">
   <tbody>
 %for diff in c.diffs:
-    <tr>
-%  if diff.deleted:
-      <td bgcolor="red">${diff.name_a}</td>
-%  elif diff.new_file:
-      <td bgcolor="green">${diff.name_b}</td>
-%  elif diff.name_a != diff.name_b:
-      <td>${diff.name_a} -> ${diff.name_b}</td>
-%  else:
-	  <td>${diff.name_a} (+${diff.insertions}/-${diff.deletions})</td>
-%  endif
-    </tr>
+% if diff.deleted:
+	<tr>
+	  <td>-------</td>
+	  <td><a href="#${diff.id}">${diff.name}</a></td>
+	  <td>${diff.total_changes}</td>
+	  <td class="graph">
+	  	<table summary="file diffstat" style="width: 500px;">
+	  	  <tr>
+	  	    <td class="add" style="width: ${diff.insertions * 100 / diff.total_changes}%;"/>
+	  	    <td class="rem" style="width: ${diff.deletions * 100 / diff.total_changes}%;"/>
+	  	  </tr>
+	  	</table>
+	  </td>
+	</tr>
+%	else:
+	<tr>
+	  <td>${h.oct_to_sym(diff.mode_b)}</td>
+	  <td>${diff.name}</td>
+	  <td>${diff.total_changes}</td>
+	  <td class="graph">
+	  	<table summary="file diffstat" style="width: ${100 if diff.max_changes > 100 else diff.max_changes}%;">
+	  	  <tr>
+	  	    <td class="add" style="width: ${diff.insertions * 100.0 / diff.max_changes}%;"/>
+	  	    <td class="rem" style="width: ${diff.deletions * 100.0 / diff.max_changes}%;"/>
+	  	    <td class="none" style="width: ${(diff.max_changes - diff.total_changes) * 100.0 / diff.max_changes}%;"/>
+	  	  </tr>
+	  	</table>
+	  </td>
+	</tr>
+%	endif
 %endfor
   </tbody>
 </table>
 <br/>
-<br/>
 %for diff in c.diffs:
-${diff.name_a}<br/>
+<a name="${diff.id}">${diff.name}</a><br/>
 %	if h.istext(diff.diff):
 ${h.highlight_diff("".join(diff.diff)) | n}<br/>
 %	else:

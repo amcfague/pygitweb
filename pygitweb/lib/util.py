@@ -96,6 +96,8 @@ def trim_first_line(msg):
     return msg[pos+1:]
 
 def oct_to_sym(str_perms):
+    if not str_perms:
+        return "-------"
     if not isinstance(str_perms, str):
         str_perms = oct(str_perms)
     
