@@ -46,8 +46,7 @@ def compress(repo_obj, id, mode="w:gz"):
     
     return output
 
-
-class PyGitRepo(object):
+class PyGitRepo(dulwich.repo.Repo):
     def __init__(self, repo_path):
         self.repo_obj = dulwich.repo.Repo(repo_path)
         
@@ -120,13 +119,28 @@ class PyGitRepo(object):
         tree_a = commit_a.tree
         tree_b = commit_b.tree
         
+        tc = self.repo_obj.object_store.tree_changes(tree_a, tree_b)
+        # First, interpret the changes before we calculate the diffs; it will
+        #    take two passes, but it'll be worth it--I hope!
+        new_files = [ (name, mode, id)
+                      for (name, mode, id) in tc
+                      if not name[0] and name[1]]
+        deleted_files = [
+                      (name, mode, id)
+                      for (name, mode, id) in tc
+                      if name[0] and not name[1]]
+        
+        
         diffs = []
+        max_changes = 0
         for ((name_a, name_b), (mode_a, mode_b), (id_a, id_b)) \
                 in self.repo_obj.object_store.tree_changes(tree_a, tree_b):
             d = Diff(self.repo_obj, name_a, name_b,
                      id_a, id_b, mode_a, mode_b)
+            max_changes = d.total_changes if d.total_changes > max_changes else max_changes 
             diffs.append(d)
-        return diffs
+        
+        return diffs, max_changes
     
     def archive_tar_gz(self, id):
         return "application/x-gzip", compress(self.repo_obj, id, "w:gz")
@@ -144,14 +158,13 @@ class PyGitRepo(object):
         return "<PyGitRepo path='%s'>" % self.repo_obj.path
 
 class Diff(object):
-    max_changes = 10
     def __init__(self, repo_obj, name_a, name_b, id_a, id_b, mode_a, mode_b):
         self.new_file = False if name_a else True
         self.deleted = False if name_b else True
         
         self.name_a = name_a or "dev/null"
         self.name_b = name_b or "dev/null"
-        self.name = name_a or name_b
+        self.name = name_b or name_a
         
         self.id_a = id_a
         self.id_b = id_b
@@ -159,6 +172,7 @@ class Diff(object):
         
         self.mode_a = mode_a
         self.mode_b = mode_b
+        self.mode = mode_b or mode_a
         
         # Calculate the diffs
         blob_a = repo_obj[id_a].data.splitlines(1) if id_a else ""

@@ -20,7 +20,7 @@ TYPES = {
     "000":'-',
     "400":'!',
     "040":'d',
-    "010":'-',
+    "100":'-',
     "120":'l',
     "160":'m'}
 
@@ -100,6 +100,13 @@ def oct_to_sym(str_perms):
         return "-------"
     if not isinstance(str_perms, str):
         str_perms = oct(str_perms)
+
+    length = len(str_perms)
+    if not (length == 6 or length == 7):
+        raise Exception("%s is not a valid octal string" % str_perms)
+    if length == 7:
+        str_perms = str_perms[1:]
+    
     
     perms = str_perms[-3:]
     type = str_perms[:3]

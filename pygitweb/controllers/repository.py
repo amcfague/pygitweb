@@ -41,7 +41,7 @@ class RepositoryController(BaseController):
         
         c.formats = g.formats
         c.commit = self.repo_obj[id]
-        c.diffs = self.repo_obj.diffs(id)
+        c.diffs, c.max_changes = self.repo_obj.diffs(id)
         return render("repository/commit.tmpl")
 
     def download(self, id):

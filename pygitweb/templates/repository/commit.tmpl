@@ -46,7 +46,7 @@
 %for diff in c.diffs:
 % if diff.deleted:
 	<tr>
-	  <td>-------</td>
+	  <td>${h.oct_to_sym(diff.mode)}</td>
 	  <td><a href="#${diff.id}">${diff.name}</a></td>
 	  <td>${diff.total_changes}</td>
 	  <td class="graph">
@@ -60,15 +60,15 @@
 	</tr>
 %	else:
 	<tr>
-	  <td>${h.oct_to_sym(diff.mode_b)}</td>
-	  <td>${diff.name}</td>
+	  <td>${h.oct_to_sym(diff.mode)}</td>
+	  <td><a href="#${diff.id}">${diff.name}</a></td>
 	  <td>${diff.total_changes}</td>
 	  <td class="graph">
-	  	<table summary="file diffstat" style="width: ${100 if diff.max_changes > 100 else diff.max_changes}%;">
+	  	<table summary="file diffstat" style="width: ${100 if c.max_changes > 100 else c.max_changes}%;">
 	  	  <tr>
-	  	    <td class="add" style="width: ${diff.insertions * 100.0 / diff.max_changes}%;"/>
-	  	    <td class="rem" style="width: ${diff.deletions * 100.0 / diff.max_changes}%;"/>
-	  	    <td class="none" style="width: ${(diff.max_changes - diff.total_changes) * 100.0 / diff.max_changes}%;"/>
+	  	    <td class="add" style="width: ${diff.insertions * 100.0 / c.max_changes}%;"/>
+	  	    <td class="rem" style="width: ${diff.deletions * 100.0 / c.max_changes}%;"/>
+	  	    <td class="none" style="width: ${(c.max_changes - diff.total_changes) * 100.0 / c.max_changes}%;"/>
 	  	  </tr>
 	  	</table>
 	  </td>
